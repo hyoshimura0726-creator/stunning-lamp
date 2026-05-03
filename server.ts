@@ -5,6 +5,7 @@ import { fileURLToPath } from "url";
 import urlHandler from "./api/auth/url.js";
 import callbackHandler from "./api/auth/callback.js";
 import youtubeHandler from "./api/youtube.js";
+import geminiHandler from "./api/gemini.js";
 
 async function startServer() {
   const app = express();
@@ -16,6 +17,7 @@ async function startServer() {
   app.get("/api/auth/url", urlHandler as any);
   app.get("/api/auth/callback", callbackHandler as any);
   app.get("/api/youtube", youtubeHandler as any);
+  app.post("/api/gemini", geminiHandler as any);
 
   // Vite middleware for development
   if (process.env.NODE_ENV !== "production") {

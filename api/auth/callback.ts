@@ -16,7 +16,7 @@ export default async function handler(req: any, res: any) {
         <body>
           <script>
             if (window.opener) {
-              window.opener.postMessage({ type: 'OAUTH_AUTH_SUCCESS', tokens: ${JSON.stringify(tokens)} }, '*');
+              window.opener.postMessage({ type: 'OAUTH_AUTH_SUCCESS', tokens: ${JSON.stringify(tokens)} }, window.location.origin);
               window.close();
             } else {
               window.location.href = '/';
