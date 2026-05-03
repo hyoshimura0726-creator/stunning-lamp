@@ -152,11 +152,11 @@ export default function Dashboard({ onGenerateIdeas, isGenerating, mobileTab }: 
       });
       const data = await res.json();
       
-      if (res.status === 401) {
+      if (res.status === 401 || (data.error && (data.error.includes('無効な認証情報') || data.error.includes('Invalid Credentials') || data.error.includes('auth')))) {
         localStorage.removeItem('youtube_token');
         setYoutubeToken(null);
         setAuthError('Unauthorized');
-        setYoutubeError('認証の有効期限が切れました。再度接続してください。');
+        setYoutubeError('認証の有効期限が切れました。「YouTube連携解除」を押してから、再度連携してください。');
         return;
       }
 
