@@ -30,22 +30,50 @@ interface DashboardProps {
   mobileTab: MobileTab;
 }
 
+import { supabase } from '../lib/supabase';
+
 export default function Dashboard({ onGenerateIdeas, isGenerating, mobileTab }: DashboardProps) {
-  const [ideas, setIdeas] = useState<VideoIdea[]>(() => {
-    const saved = localStorage.getItem('dashboard_ideas');
-    if (saved) {
+  const [ideas, setIdeas] = useState<VideoIdea[]>(mockIdeas);
+  const [isDbReady, setIsDbReady] = useState(false);
+
+  useEffect(() => {
+    const fetchFromDb = async () => {
       try {
-        return JSON.parse(saved);
-      } catch (e) {
-        return mockIdeas;
+        const { data, error } = await supabase.from('app_state').select('ideas').eq('id', 'singleton').single();
+        if (error) {
+          if (error.code !== 'PGRST116') throw error; // PGRST116 = No rows found
+        }
+        if (data?.ideas) {
+          setIdeas(data.ideas);
+        } else {
+          // No data in DB, try local storage
+          const saved = localStorage.getItem('dashboard_ideas');
+          if (saved) setIdeas(JSON.parse(saved));
+        }
+        setIsDbReady(true);
+      } catch (error: any) {
+        console.error('DB Fetch Error:', error);
+        const saved = localStorage.getItem('dashboard_ideas');
+        if (saved) setIdeas(JSON.parse(saved));
+        if (error.code === '42P01') {
+           // Table does not exist yet. User needs to run SQL.
+           setIsDbReady(false);
+        } else {
+           setIsDbReady(true);
+        }
       }
-    }
-    return mockIdeas;
-  });
+    };
+    fetchFromDb();
+  }, []);
 
   useEffect(() => {
     localStorage.setItem('dashboard_ideas', JSON.stringify(ideas));
-  }, [ideas]);
+    if (isDbReady && ideas.length > 0) {
+       supabase.from('app_state').upsert({ id: 'singleton', ideas }).then(({ error }) => {
+         if (error) console.error('Supabase Sync Error:', error);
+       });
+    }
+  }, [ideas, isDbReady]);
   const [activeDragColumn, setActiveDragColumn] = useState<IdeaStatus | null>(null);
   const [ideaToDelete, setIdeaToDelete] = useState<string | null>(null);
 
