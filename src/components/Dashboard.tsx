@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { IdeaStatus, VideoIdea, YoutubeDataResponse, MobileTab, ScriptSection } from '../types';
 import { motion, AnimatePresence } from 'motion/react';
-import { Plus, Video, PenTool, CheckCircle2, CircleDashed, Flame, Target, MessageSquareOff, BrainCircuit, Trash2, X, AlertCircle, Youtube, TrendingUp, RefreshCw, BarChart, Edit2, FileText, DollarSign } from 'lucide-react';
+import { Plus, Video, PenTool, CheckCircle2, CircleDashed, Flame, Target, MessageSquareOff, BrainCircuit, Trash2, X, AlertCircle, Youtube, TrendingUp, RefreshCw, BarChart, Edit2, FileText, DollarSign, ChevronLeft, ChevronRight } from 'lucide-react';
 import VideoTrendChart from './VideoTrendChart';
 import ChannelStatsChart from './ChannelStatsChart';
 import ScriptEditor from './ScriptEditor';
@@ -31,7 +31,21 @@ interface DashboardProps {
 }
 
 export default function Dashboard({ onGenerateIdeas, isGenerating, mobileTab }: DashboardProps) {
-  const [ideas, setIdeas] = useState<VideoIdea[]>(mockIdeas);
+  const [ideas, setIdeas] = useState<VideoIdea[]>(() => {
+    const saved = localStorage.getItem('dashboard_ideas');
+    if (saved) {
+      try {
+        return JSON.parse(saved);
+      } catch (e) {
+        return mockIdeas;
+      }
+    }
+    return mockIdeas;
+  });
+
+  useEffect(() => {
+    localStorage.setItem('dashboard_ideas', JSON.stringify(ideas));
+  }, [ideas]);
   const [activeDragColumn, setActiveDragColumn] = useState<IdeaStatus | null>(null);
   const [ideaToDelete, setIdeaToDelete] = useState<string | null>(null);
 
@@ -146,6 +160,21 @@ export default function Dashboard({ onGenerateIdeas, isGenerating, mobileTab }: 
     if (id) {
       setIdeas(prev => prev.map(idea => idea.id === id ? { ...idea, status } : idea));
     }
+  };
+
+  const handleMoveIdea = (id: string, direction: 'left' | 'right') => {
+    setIdeas(prev => {
+      return prev.map(idea => {
+        if (idea.id === id) {
+          const currentIndex = COLUMNS.findIndex(c => c.id === idea.status);
+          const newIndex = direction === 'left' ? currentIndex - 1 : currentIndex + 1;
+          if (newIndex >= 0 && newIndex < COLUMNS.length) {
+            return { ...idea, status: COLUMNS[newIndex].id };
+          }
+        }
+        return idea;
+      });
+    });
   };
 
   const handleDeleteIdea = () => {
@@ -445,9 +474,23 @@ export default function Dashboard({ onGenerateIdeas, isGenerating, mobileTab }: 
                       {idea.title}
                     </h4>
                     <div className="mt-4 flex items-center justify-between">
+                      <div className="flex items-center gap-1">
+                        {colIndex > 0 && (
+                          <button onClick={(e) => { e.stopPropagation(); handleMoveIdea(idea.id, 'left'); }} className="p-1 text-zinc-500 hover:text-indigo-400 bg-zinc-800/50 hover:bg-zinc-800 rounded md:hidden">
+                            <ChevronLeft size={16} />
+                          </button>
+                        )}
+                      </div>
                       <span className="text-[10px] text-zinc-500 font-mono">
                         {idea.createdAt.replace(/-/g, '.')}
                       </span>
+                      <div className="flex items-center gap-1">
+                        {colIndex < COLUMNS.length - 1 && (
+                          <button onClick={(e) => { e.stopPropagation(); handleMoveIdea(idea.id, 'right'); }} className="p-1 text-zinc-500 hover:text-indigo-400 bg-zinc-800/50 hover:bg-zinc-800 rounded md:hidden">
+                            <ChevronRight size={16} />
+                          </button>
+                        )}
+                      </div>
                     </div>
                   </motion.div>
                 ))}
