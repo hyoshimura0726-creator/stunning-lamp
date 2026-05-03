@@ -83,6 +83,14 @@ export default function Dashboard({ onGenerateIdeas, isGenerating, mobileTab }: 
   }, []);
 
   const handleConnect = async () => {
+    // ポップアップブロッカー対策：クリック直後に同期的にウィンドウを開く
+    const authWindow = window.open('', 'oauth_popup', 'width=600,height=700');
+    
+    if (!authWindow) {
+       alert('ポップアップがブロックされました。ブラウザの設定でポップアップを許可するか、Safari/Chromeなどの標準ブラウザで開いてください。');
+       return;
+    }
+
     try {
       const redirectUri = `${window.location.origin}/api/auth/callback`;
       const response = await fetch(`/api/auth/url?redirectUri=${encodeURIComponent(redirectUri)}`);
@@ -90,13 +98,12 @@ export default function Dashboard({ onGenerateIdeas, isGenerating, mobileTab }: 
          throw new Error('Failed to get auth URL. Check API keys.');
       }
       const { url } = await response.json();
-
-      const authWindow = window.open(url, 'oauth_popup', 'width=600,height=700');
-      if (!authWindow) {
-         alert('ポップアップがブロックされました。許可してください。');
-      }
+      
+      // 取得したURLにリダイレクト
+      authWindow.location.href = url;
     } catch (error) {
       console.error('OAuth error:', error);
+      authWindow.close();
       alert('OAuthの初期化に失敗しました。GOOGLE_CLIENT_IDとSECRETが設定されているか確認してください。');
     }
   };
