@@ -376,32 +376,42 @@ export default function Dashboard({ onGenerateIdeas, isGenerating, mobileTab }: 
             className="bg-[#0d0d0d] border border-zinc-800 rounded-lg p-5"
           >
             <div className="flex items-center gap-3 mb-4">
-              <div className="p-1.5 bg-indigo-500/10 text-indigo-400 rounded-md border border-indigo-500/20">
-                <Target size={14} />
+              <div className="p-1.5 bg-emerald-500/10 text-emerald-400 rounded-md border border-emerald-500/20">
+                <BarChart size={14} />
               </div>
-              <h3 className="text-[10px] uppercase tracking-widest font-bold text-zinc-400">本日の学習目標</h3>
+              <h3 className="text-[10px] uppercase tracking-widest font-bold text-zinc-400">平均視聴時間</h3>
             </div>
             <div className="flex items-end gap-2 mt-2">
-              <span className="text-2xl font-mono text-zinc-100">5.5</span>
-              <span className="text-[10px] text-zinc-500 pb-1 tracking-widest">/ 8.0 時間</span>
+              <span className="text-2xl font-mono text-zinc-100">4:28</span>
+              <span className="text-[10px] text-zinc-500 pb-1 tracking-widest">分:秒</span>
             </div>
-            <div className="w-full bg-zinc-800 rounded-full h-1.5 mt-4 overflow-hidden">
-              <div className="bg-indigo-500 h-1.5 rounded-full" style={{ width: '68%' }}></div>
+            <div className="flex items-center gap-1.5 mt-4 text-[10px] font-bold tracking-widest">
+              <TrendingUp size={12} className="text-emerald-400" />
+               <span className="text-emerald-400">
+                +0:12 <span className="font-normal text-zinc-600">先月比</span>
+              </span>
             </div>
           </motion.div>
 
           <motion.div 
             initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.4 }}
-            className="bg-[#0d0d0d] border border-zinc-800 rounded-lg p-5 relative overflow-hidden flex flex-col justify-between"
+            className="bg-[#0d0d0d] border border-zinc-800 rounded-lg p-5"
           >
-            <div className="absolute -right-4 -top-4 text-zinc-800/30">
-              <MessageSquareOff size={80} />
+            <div className="flex items-center gap-3 mb-4">
+              <div className="p-1.5 bg-purple-500/10 text-purple-400 rounded-md border border-purple-500/20">
+                <Target size={14} />
+              </div>
+              <h3 className="text-[10px] uppercase tracking-widest font-bold text-zinc-400">クリック率 (CTR)</h3>
             </div>
-            <div className="relative z-10">
-              <h3 className="text-[10px] uppercase tracking-widest font-bold text-zinc-400 mb-2">メンタルプロテクト</h3>
-              <p className="text-xs text-zinc-300 leading-relaxed font-medium">
-                「アンチコメントは、前に進んでいる証拠。」
-              </p>
+            <div className="flex items-end gap-2 mt-2">
+              <span className="text-2xl font-mono text-zinc-100">6.8</span>
+              <span className="text-[10px] text-zinc-500 pb-1 tracking-widest">%</span>
+            </div>
+            <div className="flex items-center gap-1.5 mt-4 text-[10px] font-bold tracking-widest">
+              <TrendingUp size={12} className="text-red-400 rotate-180" />
+               <span className="text-red-400">
+                -0.4% <span className="font-normal text-zinc-600">先月比</span>
+              </span>
             </div>
           </motion.div>
         </div>

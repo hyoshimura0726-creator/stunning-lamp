@@ -3,7 +3,7 @@ import { useEditor, EditorContent } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import Placeholder from '@tiptap/extension-placeholder';
 import { VideoIdea, ScriptSection } from '../types';
-import { ArrowLeft, Plus, MoveUp, MoveDown, Trash2, Check, GripVertical, FileText } from 'lucide-react';
+import { ArrowLeft, Plus, MoveUp, MoveDown, Trash2, Check, GripVertical, FileText, BrainCircuit, CircleDashed } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 
 const RichTextEditor = ({ content, onChange }: { content: string, onChange: (content: string) => void }) => {
@@ -56,6 +56,27 @@ export default function ScriptEditor({ idea, onClose, onSave }: ScriptEditorProp
   const [sections, setSections] = useState<ScriptSection[]>(
     idea.script?.sections || DEFAULT_SECTIONS
   );
+  const [isGenerating, setIsGenerating] = useState(false);
+
+  const handleGenerateScript = async () => {
+    setIsGenerating(true);
+    try {
+      const response = await fetch('/api/gemini-script', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ title: idea.title, tags: idea.tags })
+      });
+      if (!response.ok) throw new Error('Failed');
+      const json = await response.json();
+      if (json.data && json.data.length > 0) {
+        setSections(json.data.map((s: any, i: number) => ({ id: Date.now().toString() + i, title: s.title, content: s.content })));
+      }
+    } catch (e) {
+      alert('AI台本の作成に失敗しました');
+    } finally {
+      setIsGenerating(false);
+    }
+  };
 
   const handleUpdateContent = (id: string, content: string) => {
     setSections(prev => prev.map(s => s.id === id ? { ...s, content } : s));
@@ -108,6 +129,14 @@ export default function ScriptEditor({ idea, onClose, onSave }: ScriptEditorProp
           </div>
         </div>
         <div className="flex items-center gap-2">
+          <button 
+            onClick={handleGenerateScript}
+            disabled={isGenerating}
+            className="flex-1 md:flex-none flex items-center justify-center gap-2 bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 hover:bg-indigo-500/20 disabled:opacity-50 disabled:cursor-not-allowed transition-colors px-4 py-2 text-xs font-bold uppercase tracking-widest rounded-lg"
+          >
+            {isGenerating ? <CircleDashed size={14} className="animate-spin" /> : <BrainCircuit size={14} />}
+            AIに構成案を作ってもらう
+          </button>
           <button 
             onClick={handleSave}
             className="flex-1 md:flex-none flex items-center justify-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 text-xs font-bold uppercase tracking-widest rounded-lg transition-colors"
