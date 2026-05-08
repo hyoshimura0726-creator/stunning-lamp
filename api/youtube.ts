@@ -165,6 +165,42 @@ async function fetchYoutubeData(accessToken: string) {
     }
   }
 
+  // Fetch trending competitor videos
+  let trendingVideosWithStats: any = [];
+  try {
+    const lastMonth = new Date();
+    lastMonth.setDate(lastMonth.getDate() - 30);
+    
+    const trendSearch = await youtube.search.list({
+      part: ['snippet'],
+      q: '簿記1級 OR 税理士試験 勉強',
+      order: 'viewCount',
+      publishedAfter: lastMonth.toISOString(),
+      maxResults: 5,
+      type: ['video']
+    });
+    
+    const trendVideoIds = trendSearch.data.items?.map(v => v.id?.videoId).filter(Boolean) as string[];
+    
+    if (trendVideoIds.length > 0) {
+      const trendVideosStats = await youtube.videos.list({
+        part: ['statistics', 'snippet'],
+        id: trendVideoIds
+      });
+      
+      trendingVideosWithStats = trendVideosStats.data.items?.map(item => ({
+        id: item.id,
+        title: item.snippet?.title,
+        thumbnail: item.snippet?.thumbnails?.medium?.url || item.snippet?.thumbnails?.default?.url,
+        channelTitle: item.snippet?.channelTitle,
+        publishedAt: item.snippet?.publishedAt,
+        viewCount: item.statistics?.viewCount || '0'
+      })) || [];
+    }
+  } catch (error) {
+    console.error("Failed to fetch trending videos", error);
+  }
+
   return {
     channelStats: {
       subscriberCount: channelStats?.subscriberCount || '0',
@@ -172,7 +208,8 @@ async function fetchYoutubeData(accessToken: string) {
       videoCount: channelStats?.videoCount || '0',
       history: channelHistory
     },
-    latestVideos: videosWithStats
+    latestVideos: videosWithStats,
+    trendingVideos: trendingVideosWithStats
   };
 }
 

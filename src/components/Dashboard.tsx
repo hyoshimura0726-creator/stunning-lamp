@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { IdeaStatus, VideoIdea, YoutubeDataResponse, MobileTab, ScriptSection } from '../types';
 import { motion, AnimatePresence } from 'motion/react';
-import { Plus, Video, PenTool, CheckCircle2, CircleDashed, Flame, Target, MessageSquareOff, BrainCircuit, Trash2, X, AlertCircle, Youtube, TrendingUp, RefreshCw, BarChart, Edit2, FileText, DollarSign, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Plus, Video, PenTool, CheckCircle2, CircleDashed, Flame, Target, MessageSquareOff, BrainCircuit, Trash2, X, AlertCircle, Youtube, TrendingUp, RefreshCw, BarChart, Edit2, FileText, DollarSign, ChevronLeft, ChevronRight, Image } from 'lucide-react';
 import VideoTrendChart from './VideoTrendChart';
 import ChannelStatsChart from './ChannelStatsChart';
 import ScriptEditor from './ScriptEditor';
@@ -83,6 +83,10 @@ export default function Dashboard({ onGenerateIdeas, isGenerating, mobileTab }: 
 
   const [editingScriptIdea, setEditingScriptIdea] = useState<VideoIdea | null>(null);
 
+  const [ideaForThumbnail, setIdeaForThumbnail] = useState<VideoIdea | null>(null);
+  const [thumbnailIdea, setThumbnailIdea] = useState<any>(null);
+  const [isGeneratingThumbnail, setIsGeneratingThumbnail] = useState(false);
+
   const [youtubeData, setYoutubeData] = useState<YoutubeDataResponse | null>(null);
   const [isLoadingYoutube, setIsLoadingYoutube] = useState(false);
   const [youtubeError, setYoutubeError] = useState('');
@@ -133,6 +137,28 @@ export default function Dashboard({ onGenerateIdeas, isGenerating, mobileTab }: 
       console.error('OAuth error:', error);
       authWindow.close();
       alert('OAuthの初期化に失敗しました。GOOGLE_CLIENT_IDとSECRETが設定されているか確認してください。');
+    }
+  };
+
+  const handleGenerateThumbnail = async (idea: VideoIdea) => {
+    setIdeaForThumbnail(idea);
+    setIsGeneratingThumbnail(true);
+    setThumbnailIdea(null);
+    try {
+      const response = await fetch('/api/gemini-thumbnail', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ title: idea.title, tags: idea.tags })
+      });
+      const json = await response.json();
+      if (json.data) {
+        setThumbnailIdea(json.data);
+      }
+    } catch (e) {
+      console.error(e);
+      alert('サムネイル案の生成に失敗しました');
+    } finally {
+      setIsGeneratingThumbnail(false);
     }
   };
 
@@ -500,6 +526,13 @@ export default function Dashboard({ onGenerateIdeas, isGenerating, mobileTab }: 
                           <FileText size={14} />
                         </button>
                         <button 
+                          onClick={(e) => { e.stopPropagation(); handleGenerateThumbnail(idea); }}
+                          className="text-zinc-600 hover:text-pink-400 transition-colors bg-zinc-900/50 hover:bg-zinc-800 border border-zinc-800 p-1 flex items-center justify-center rounded-lg"
+                          title="AIサムネイル案"
+                        >
+                          <Image size={14} />
+                        </button>
+                        <button 
                           onClick={(e) => { e.stopPropagation(); setIdeaToEdit(idea); setEditTitle(idea.title); setEditTags(idea.tags.join(', ')); }}
                           className="text-zinc-600 hover:text-indigo-400 transition-colors bg-zinc-900/50 hover:bg-zinc-800 border border-zinc-800 p-1 flex items-center justify-center rounded-lg"
                           title="編集"
@@ -657,6 +690,49 @@ export default function Dashboard({ onGenerateIdeas, isGenerating, mobileTab }: 
         )}
       </div>
 
+      {/* Trending Competitor Videos */}
+      {youtubeData?.trendingVideos && youtubeData.trendingVideos.length > 0 && (
+      <div className={`mt-4 shrink-0 pb-12 ${mobileTab === 'stats' ? 'block' : 'hidden md:block'}`}>
+        <h2 className="text-xs font-bold text-zinc-400 uppercase tracking-widest mb-4 flex items-center gap-2">
+          <Flame size={16} className="text-orange-500" />
+          ライバル・トレンド監視（簿記・税理士）
+        </h2>
+        <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+           {youtubeData.trendingVideos.map((video: any) => (
+                <a 
+                  key={video.id} 
+                  href={`https://youtube.com/watch?v=${video.id}`}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="bg-[#0d0d0d] border border-zinc-800 hover:border-zinc-700 rounded-xl overflow-hidden group transition-colors flex flex-col items-start text-left"
+                >
+                  <div className="relative aspect-video bg-zinc-900 border-b border-zinc-800 overflow-hidden w-full">
+                    {video.thumbnail ? (
+                      <img src={video.thumbnail} alt={video.title} className="w-full h-full object-cover opacity-80 group-hover:opacity-100 transition-opacity" />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center text-zinc-700">No Image</div>
+                    )}
+                  </div>
+                  <div className="p-3 flex flex-col flex-1 w-full">
+                    <h4 className="text-xs font-medium text-zinc-200 line-clamp-2 leading-snug mb-2 flex-1">
+                      {video.title}
+                    </h4>
+                    <div className="flex flex-col gap-1.5 mt-auto pt-2 border-t border-zinc-800/50">
+                      <div className="flex items-center gap-1 text-[10px] text-zinc-400">
+                         <span className="truncate">{video.channelTitle}</span>
+                      </div>
+                      <div className="flex items-center justify-between text-[10px] text-zinc-500 font-mono">
+                         <span>{parseInt(video.viewCount).toLocaleString()} views</span>
+                         <span>{new Date(video.publishedAt).toLocaleDateString()}</span>
+                      </div>
+                    </div>
+                  </div>
+                </a>
+           ))}
+        </div>
+      </div>
+      )}
+
       {/* Settings Placeholder for Mobile */}
       {mobileTab === 'settings' && (
         <div className="flex-1 flex flex-col items-center justify-center md:hidden min-h-[300px]">
@@ -786,6 +862,80 @@ export default function Dashboard({ onGenerateIdeas, isGenerating, mobileTab }: 
                   削除する
                 </button>
               </div>
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
+
+      {/* Thumbnail Idea Modal */}
+      <AnimatePresence>
+        {ideaForThumbnail && (
+          <>
+            <motion.div 
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="absolute inset-0 bg-black/60 z-40 backdrop-blur-sm"
+              onClick={() => setIdeaForThumbnail(null)}
+            />
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 20 }}
+              className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-50 bg-[#0d0d0d] border border-zinc-800 p-6 rounded-2xl shadow-xl shadow-black/50 w-[90%] max-w-lg max-h-[85vh] overflow-y-auto"
+            >
+              <div className="flex justify-between items-center mb-6">
+                <div className="flex items-center gap-2 text-pink-400">
+                  <div className="p-1.5 bg-pink-500/10 rounded-md border border-pink-500/20">
+                    <Image size={16} />
+                  </div>
+                  <h3 className="font-bold text-sm">AIサムネイル構図アドバイザー</h3>
+                </div>
+                <button 
+                  onClick={() => setIdeaForThumbnail(null)}
+                  className="text-zinc-500 hover:text-zinc-300 transition-colors"
+                >
+                  <X size={16} />
+                </button>
+              </div>
+
+              {isGeneratingThumbnail ? (
+                 <div className="flex flex-col items-center justify-center py-16 gap-4">
+                    <CircleDashed size={32} className="text-pink-500 animate-spin" />
+                    <p className="text-xs text-zinc-400 font-bold tracking-widest animate-pulse">AIが最強の構図を考案中...</p>
+                 </div>
+               ) : thumbnailIdea ? (
+                 <div className="space-y-4">
+                    <div className="bg-zinc-900/50 p-4 rounded-xl border border-zinc-800">
+                       <h4 className="text-[10px] text-pink-400 font-bold uppercase tracking-widest mb-1">コンセプト</h4>
+                       <p className="text-sm font-bold text-zinc-100">{thumbnailIdea.concept}</p>
+                    </div>
+                    <div className="grid grid-cols-2 gap-3">
+                       <div className="bg-zinc-900/50 p-3 rounded-xl border border-zinc-800">
+                          <h4 className="text-[10px] text-zinc-500 font-bold uppercase tracking-widest mb-1">左側の配置</h4>
+                          <p className="text-xs text-zinc-300">{thumbnailIdea.leftSide}</p>
+                       </div>
+                       <div className="bg-zinc-900/50 p-3 rounded-xl border border-zinc-800">
+                          <h4 className="text-[10px] text-zinc-500 font-bold uppercase tracking-widest mb-1">右側の配置</h4>
+                          <p className="text-xs text-zinc-300">{thumbnailIdea.rightSide}</p>
+                       </div>
+                    </div>
+                    <div className="bg-zinc-900/50 p-4 rounded-xl border border-zinc-800">
+                       <h4 className="text-[10px] text-yellow-400 font-bold uppercase tracking-widest mb-1">メインコピー（デカ文字）</h4>
+                       <p className="text-xl font-black text-white">{thumbnailIdea.mainCopy}</p>
+                    </div>
+                    <div className="bg-zinc-900/50 p-3 rounded-xl border border-zinc-800 flex justify-between items-center">
+                       <div>
+                         <h4 className="text-[10px] text-zinc-500 font-bold uppercase tracking-widest mb-1">サブコピー</h4>
+                         <p className="text-xs text-zinc-300">{thumbnailIdea.subCopy}</p>
+                       </div>
+                       <div className="text-right">
+                         <h4 className="text-[10px] text-zinc-500 font-bold uppercase tracking-widest mb-1">配色</h4>
+                         <p className="text-xs text-zinc-300 font-bold">{thumbnailIdea.colors}</p>
+                       </div>
+                    </div>
+                 </div>
+               ) : null}
             </motion.div>
           </>
         )}

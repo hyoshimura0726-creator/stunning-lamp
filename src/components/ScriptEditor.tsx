@@ -3,7 +3,7 @@ import { useEditor, EditorContent } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import Placeholder from '@tiptap/extension-placeholder';
 import { VideoIdea, ScriptSection } from '../types';
-import { ArrowLeft, Plus, MoveUp, MoveDown, Trash2, Check, GripVertical, FileText, BrainCircuit, CircleDashed } from 'lucide-react';
+import { ArrowLeft, Plus, MoveUp, MoveDown, Trash2, Check, GripVertical, FileText, BrainCircuit, CircleDashed, Play, X, Pause } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 
 const RichTextEditor = ({ content, onChange }: { content: string, onChange: (content: string) => void }) => {
@@ -57,6 +57,27 @@ export default function ScriptEditor({ idea, onClose, onSave }: ScriptEditorProp
     idea.script?.sections || DEFAULT_SECTIONS
   );
   const [isGenerating, setIsGenerating] = useState(false);
+  const [isPrompterMode, setIsPrompterMode] = useState(false);
+  const [prompterSpeed, setPrompterSpeed] = useState(2);
+  const [isScrolling, setIsScrolling] = useState(false);
+
+  useEffect(() => {
+    let animationId: number;
+    const scroll = () => {
+      if (isScrolling) {
+        document.getElementById('prompter-scroll-container')?.scrollBy(0, prompterSpeed);
+        animationId = requestAnimationFrame(scroll);
+      }
+    };
+    if (isScrolling) {
+      animationId = requestAnimationFrame(scroll);
+    }
+    return () => cancelAnimationFrame(animationId);
+  }, [isScrolling, prompterSpeed]);
+
+  const stripHtml = (html: string) => html.replace(/<[^>]*>?/gm, '');
+  const totalChars = sections.reduce((acc, s) => acc + stripHtml(s.content).length, 0);
+  const estimatedTime = Math.ceil(totalChars / 300);
 
   const handleGenerateScript = async () => {
     setIsGenerating(true);
@@ -125,17 +146,28 @@ export default function ScriptEditor({ idea, onClose, onSave }: ScriptEditorProp
               <FileText size={16} className="text-indigo-400" />
               台本エディタ
             </h2>
-            <p className="text-xs text-zinc-500 mt-1 line-clamp-1">{idea.title}</p>
+            <div className="flex items-center gap-2 mt-1">
+              <p className="text-xs text-zinc-500 line-clamp-1">{idea.title}</p>
+              <span className="text-[10px] bg-zinc-800 text-zinc-400 px-2 py-0.5 rounded-full">{totalChars}文字 (約{estimatedTime}分)</span>
+            </div>
           </div>
         </div>
         <div className="flex items-center gap-2">
           <button 
+            onClick={() => setIsPrompterMode(true)}
+            className="flex-1 md:flex-none flex items-center justify-center gap-2 bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 hover:bg-emerald-500/20 transition-colors px-3 py-2 text-xs font-bold uppercase tracking-widest rounded-lg"
+          >
+            <Play size={14} />
+            <span className="hidden md:inline">プロンプター</span>
+          </button>
+          <button 
             onClick={handleGenerateScript}
             disabled={isGenerating}
-            className="flex-1 md:flex-none flex items-center justify-center gap-2 bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 hover:bg-indigo-500/20 disabled:opacity-50 disabled:cursor-not-allowed transition-colors px-4 py-2 text-xs font-bold uppercase tracking-widest rounded-lg"
+            className="flex-1 md:flex-none flex items-center justify-center gap-2 bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 hover:bg-indigo-500/20 disabled:opacity-50 disabled:cursor-not-allowed transition-colors px-3 py-2 text-xs font-bold uppercase tracking-widest rounded-lg"
           >
             {isGenerating ? <CircleDashed size={14} className="animate-spin" /> : <BrainCircuit size={14} />}
-            AIに構成案を作ってもらう
+            <span className="hidden md:inline">AIに構成案を作ってもらう</span>
+            <span className="md:hidden">AI</span>
           </button>
           <button 
             onClick={handleSave}
@@ -204,6 +236,53 @@ export default function ScriptEditor({ idea, onClose, onSave }: ScriptEditorProp
         </button>
         <div className="h-20 shrink-0"></div>
       </div>
+
+      {/* Prompter Mode Modal */}
+      <AnimatePresence>
+        {isPrompterMode && (
+          <motion.div
+            initial={{ opacity: 0, y: 100 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 100 }}
+            className="fixed inset-0 z-[100] bg-black text-white flex flex-col"
+          >
+            <div className="flex items-center justify-between p-4 border-b border-zinc-800 bg-black/80 backdrop-blur-md z-10 shrink-0">
+               <div className="flex items-center gap-4">
+                  <button onClick={() => { setIsPrompterMode(false); setIsScrolling(false); }} className="p-2 bg-zinc-900 rounded-full hover:bg-zinc-800">
+                     <X size={20} />
+                  </button>
+                  <span className="font-bold text-sm hidden md:inline">プロンプターモード</span>
+               </div>
+               <div className="flex items-center gap-4">
+                  <div className="flex items-center gap-2 text-xs text-zinc-400">
+                     <span>速度:</span>
+                     <input type="range" min="1" max="5" value={prompterSpeed} onChange={e => setPrompterSpeed(Number(e.target.value))} className="w-20 md:w-32" />
+                  </div>
+                  <button 
+                    onClick={() => setIsScrolling(!isScrolling)} 
+                    className={`flex items-center gap-2 px-4 md:px-6 py-2 rounded-full font-bold transition-colors text-sm ${isScrolling ? 'bg-amber-500 text-black' : 'bg-emerald-500 text-black'}`}
+                  >
+                    {isScrolling ? <Pause size={16} /> : <Play size={16} />}
+                    {isScrolling ? '停止' : '再生'}
+                  </button>
+               </div>
+            </div>
+            <div id="prompter-scroll-container" className="flex-1 overflow-y-auto p-6 md:p-16 pb-[60vh] scroll-smooth">
+               <div className="max-w-4xl mx-auto space-y-16">
+                  {sections.map(s => (
+                    <div key={s.id}>
+                       <h3 className="text-xl md:text-2xl font-bold text-emerald-400 mb-6 md:mb-8 uppercase tracking-widest">{s.title}</h3>
+                       <div 
+                         className="text-3xl md:text-5xl leading-[1.8] md:leading-[1.8] font-bold text-zinc-100 space-y-8" 
+                         dangerouslySetInnerHTML={{ __html: s.content || '<span class="text-zinc-700">内容がありません</span>' }} 
+                       />
+                    </div>
+                  ))}
+               </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
