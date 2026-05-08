@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { IdeaStatus, VideoIdea, YoutubeDataResponse, MobileTab, ScriptSection } from '../types';
 import { motion, AnimatePresence } from 'motion/react';
-import { Plus, Video, PenTool, CheckCircle2, CircleDashed, Flame, Target, MessageSquareOff, BrainCircuit, Trash2, X, AlertCircle, Youtube, TrendingUp, RefreshCw, BarChart, Edit2, FileText, DollarSign, ChevronLeft, ChevronRight, Image } from 'lucide-react';
+import { Plus, Video, PenTool, CheckCircle2, CircleDashed, Flame, Target, MessageSquareOff, BrainCircuit, Trash2, X, AlertCircle, Youtube, TrendingUp, RefreshCw, BarChart, Edit2, FileText, DollarSign, ChevronLeft, ChevronRight, Image, MessageSquare } from 'lucide-react';
 import VideoTrendChart from './VideoTrendChart';
 import ChannelStatsChart from './ChannelStatsChart';
 import ScriptEditor from './ScriptEditor';
@@ -87,6 +87,9 @@ export default function Dashboard({ onGenerateIdeas, isGenerating, mobileTab }: 
   const [thumbnailIdea, setThumbnailIdea] = useState<any>(null);
   const [isGeneratingThumbnail, setIsGeneratingThumbnail] = useState(false);
 
+  const [isConsulting, setIsConsulting] = useState(false);
+  const [consultantData, setConsultantData] = useState<any>(null);
+
   const [youtubeData, setYoutubeData] = useState<YoutubeDataResponse | null>(null);
   const [isLoadingYoutube, setIsLoadingYoutube] = useState(false);
   const [youtubeError, setYoutubeError] = useState('');
@@ -159,6 +162,31 @@ export default function Dashboard({ onGenerateIdeas, isGenerating, mobileTab }: 
       alert('サムネイル案の生成に失敗しました');
     } finally {
       setIsGeneratingThumbnail(false);
+    }
+  };
+
+  const handleConsultAI = async () => {
+    if (!youtubeData) return;
+    setIsConsulting(true);
+    setConsultantData(null);
+    try {
+      const response = await fetch('/api/gemini-consultant', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          stats: youtubeData.channelStats, 
+          trends: youtubeData.trendingVideos || [] 
+        })
+      });
+      const json = await response.json();
+      if (json.success) {
+        setConsultantData(json.data);
+      }
+    } catch (e) {
+      console.error(e);
+      alert('AIコンサルの呼び出しに失敗しました');
+    } finally {
+      setIsConsulting(false);
     }
   };
 
@@ -311,6 +339,15 @@ export default function Dashboard({ onGenerateIdeas, isGenerating, mobileTab }: 
         </div>
         
         <div className="flex flex-row gap-2.5 mt-4 md:mt-0 w-full md:w-auto overflow-x-auto pb-1 md:pb-0">
+          <button 
+            onClick={handleConsultAI}
+            disabled={isConsulting || !youtubeData}
+            className="flex-1 md:flex-none flex items-center justify-center gap-2 bg-pink-500/10 text-pink-400 border border-pink-500/20 hover:bg-pink-500/20 disabled:opacity-50 disabled:cursor-not-allowed transition-colors px-4 py-3 min-h-[44px] min-w-[44px] rounded-xl font-bold text-[10px] md:text-xs uppercase tracking-widest whitespace-nowrap"
+          >
+            {isConsulting ? <CircleDashed size={16} className="animate-spin" /> : <MessageSquare size={16} />}
+            AIコンサル
+          </button>
+          
           <button 
             onClick={() => onGenerateIdeas(ideas)}
             disabled={isGenerating}
@@ -932,6 +969,82 @@ export default function Dashboard({ onGenerateIdeas, isGenerating, mobileTab }: 
                        <div className="text-right">
                          <h4 className="text-[10px] text-zinc-500 font-bold uppercase tracking-widest mb-1">配色</h4>
                          <p className="text-xs text-zinc-300 font-bold">{thumbnailIdea.colors}</p>
+                       </div>
+                    </div>
+                 </div>
+               ) : null}
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
+
+      {/* AI Consultant Modal */}
+      <AnimatePresence>
+        {(isConsulting || consultantData) && (
+          <>
+            <motion.div 
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="absolute inset-0 bg-black/60 z-40 backdrop-blur-sm"
+              onClick={() => !isConsulting && setConsultantData(null)}
+            />
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 20 }}
+              className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-50 bg-[#0d0d0d] border border-zinc-800 p-6 rounded-2xl shadow-xl shadow-black/50 w-[90%] max-w-2xl max-h-[85vh] overflow-y-auto"
+            >
+              <div className="flex justify-between items-center mb-6">
+                <div className="flex items-center gap-2 text-pink-400">
+                  <div className="p-1.5 bg-pink-500/10 rounded-md border border-pink-500/20">
+                    <MessageSquare size={16} />
+                  </div>
+                  <h3 className="font-bold text-sm">AI専属チャンネルコンサルタント</h3>
+                </div>
+                {!isConsulting && (
+                <button 
+                  onClick={() => setConsultantData(null)}
+                  className="text-zinc-500 hover:text-zinc-300 transition-colors"
+                >
+                  <X size={16} />
+                </button>
+                )}
+              </div>
+
+              {isConsulting ? (
+                 <div className="flex flex-col items-center justify-center py-16 gap-4">
+                    <CircleDashed size={32} className="text-pink-500 animate-spin" />
+                    <p className="text-xs text-zinc-400 font-bold tracking-widest animate-pulse">チャンネルデータと市場トレンドを分析中...</p>
+                 </div>
+               ) : consultantData ? (
+                 <div className="space-y-6">
+                    <div className="bg-zinc-900/50 p-5 rounded-xl border border-zinc-800">
+                       <h4 className="text-[10px] text-pink-400 font-bold uppercase tracking-widest mb-2">総評</h4>
+                       <p className="text-sm font-bold text-zinc-100 leading-relaxed">{consultantData.overallEvaluation}</p>
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                       <div className="bg-zinc-900/50 p-5 rounded-xl border border-zinc-800">
+                          <h4 className="text-[10px] text-emerald-400 font-bold uppercase tracking-widest mb-3">良かった点・チャンス</h4>
+                          <ul className="space-y-3">
+                             {consultantData.goodPoints.map((pt: string, i: number) => (
+                               <li key={i} className="text-xs text-zinc-300 flex items-start gap-2">
+                                  <span className="text-emerald-500 mt-0.5">•</span>
+                                  <span className="leading-relaxed">{pt}</span>
+                               </li>
+                             ))}
+                          </ul>
+                       </div>
+                       <div className="bg-zinc-900/50 p-5 rounded-xl border border-zinc-800">
+                          <h4 className="text-[10px] text-amber-400 font-bold uppercase tracking-widest mb-3">明日からやるべきアクション</h4>
+                          <ul className="space-y-3">
+                             {consultantData.actionPlan.map((pt: string, i: number) => (
+                               <li key={i} className="text-xs text-zinc-300 flex items-start gap-2">
+                                  <span className="text-amber-500 mt-0.5">→</span>
+                                  <span className="leading-relaxed">{pt}</span>
+                               </li>
+                             ))}
+                          </ul>
                        </div>
                     </div>
                  </div>

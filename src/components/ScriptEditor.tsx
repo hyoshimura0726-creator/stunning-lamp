@@ -3,7 +3,7 @@ import { useEditor, EditorContent } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import Placeholder from '@tiptap/extension-placeholder';
 import { VideoIdea, ScriptSection } from '../types';
-import { ArrowLeft, Plus, MoveUp, MoveDown, Trash2, Check, GripVertical, FileText, BrainCircuit, CircleDashed, Play, X, Pause } from 'lucide-react';
+import { ArrowLeft, Plus, MoveUp, MoveDown, Trash2, Check, GripVertical, FileText, BrainCircuit, CircleDashed, Play, X, Pause, Hash, Smartphone } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 
 const RichTextEditor = ({ content, onChange }: { content: string, onChange: (content: string) => void }) => {
@@ -78,6 +78,30 @@ export default function ScriptEditor({ idea, onClose, onSave }: ScriptEditorProp
   const stripHtml = (html: string) => html.replace(/<[^>]*>?/gm, '');
   const totalChars = sections.reduce((acc, s) => acc + stripHtml(s.content).length, 0);
   const estimatedTime = Math.ceil(totalChars / 300);
+
+  const [repurposeResult, setRepurposeResult] = useState<{type: string, text: string} | null>(null);
+  const [isRepurposing, setIsRepurposing] = useState(false);
+
+  const handleRepurpose = async (type: 'twitter' | 'shorts') => {
+    setIsRepurposing(true);
+    setRepurposeResult(null);
+    try {
+      const fullScript = sections.map(s => `[${s.title}]\n${stripHtml(s.content)}`).join('\n\n');
+      const response = await fetch('/api/gemini-repurpose', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ script: fullScript, type })
+      });
+      const json = await response.json();
+      if (json.success) {
+        setRepurposeResult({ type, text: json.text });
+      }
+    } catch (e) {
+      alert('自動生成に失敗しました');
+    } finally {
+      setIsRepurposing(false);
+    }
+  };
 
   const handleGenerateScript = async () => {
     setIsGenerating(true);
@@ -234,6 +258,50 @@ export default function ScriptEditor({ idea, onClose, onSave }: ScriptEditorProp
           <Plus size={16} />
           セクションを追加
         </button>
+
+        {/* Repurpose Section */}
+        <div className="mt-8 bg-[#131316] border border-zinc-800 rounded-xl p-6">
+           <h3 className="text-sm font-bold text-zinc-100 flex items-center gap-2 mb-4">
+             <BrainCircuit size={16} className="text-indigo-400" />
+             ✨ この台本を再利用する (他SNS展開)
+           </h3>
+           <div className="flex flex-col md:flex-row gap-3">
+             <button onClick={() => handleRepurpose('twitter')} disabled={isRepurposing} className="flex-1 bg-sky-500/10 hover:bg-sky-500/20 text-sky-400 border border-sky-500/20 py-3 rounded-lg flex items-center justify-center gap-2 text-xs font-bold transition-colors disabled:opacity-50">
+                <Hash size={16} />
+                X(Twitter)用の投稿文を作る
+             </button>
+             <button onClick={() => handleRepurpose('shorts')} disabled={isRepurposing} className="flex-1 bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 border border-rose-500/20 py-3 rounded-lg flex items-center justify-center gap-2 text-xs font-bold transition-colors disabled:opacity-50">
+                <Smartphone size={16} />
+                ショート動画用の台本にする
+             </button>
+           </div>
+           
+           {isRepurposing && (
+              <div className="mt-6 flex flex-col items-center justify-center py-8">
+                 <CircleDashed size={24} className="text-indigo-500 animate-spin mb-2" />
+                 <p className="text-[10px] text-zinc-400 font-bold uppercase tracking-widest animate-pulse">AIが台本を要約・最適化しています...</p>
+              </div>
+           )}
+           
+           {repurposeResult && !isRepurposing && (
+              <div className="mt-6">
+                 <div className="flex items-center justify-between mb-2">
+                   <h4 className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">
+                     {repurposeResult.type === 'twitter' ? 'X(Twitter)用テキスト' : 'ショート動画用台本'}
+                   </h4>
+                   <button onClick={() => navigator.clipboard.writeText(repurposeResult.text)} className="text-[10px] bg-zinc-800 hover:bg-zinc-700 text-zinc-300 px-3 py-1 rounded transition-colors">
+                     コピーする
+                   </button>
+                 </div>
+                 <textarea 
+                   readOnly 
+                   value={repurposeResult.text} 
+                   className="w-full h-48 bg-[#0a0a0a] border border-zinc-800 rounded-lg p-4 text-xs text-zinc-300 focus:outline-none resize-none leading-relaxed"
+                 />
+              </div>
+           )}
+        </div>
+
         <div className="h-20 shrink-0"></div>
       </div>
 

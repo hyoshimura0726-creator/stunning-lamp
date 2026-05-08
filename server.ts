@@ -8,6 +8,8 @@ import youtubeHandler from "./api/youtube.js";
 import geminiHandler from "./api/gemini.js";
 import geminiScriptHandler from "./api/gemini-script.js";
 import geminiThumbnailHandler from "./api/gemini-thumbnail.js";
+import geminiRepurposeHandler from "./api/gemini-repurpose.js";
+import geminiConsultantHandler from "./api/gemini-consultant.js";
 
 async function startServer() {
   const app = express();
@@ -22,6 +24,8 @@ async function startServer() {
   app.post("/api/gemini", geminiHandler as any);
   app.post("/api/gemini-script", geminiScriptHandler as any);
   app.post("/api/gemini-thumbnail", geminiThumbnailHandler as any);
+  app.post("/api/gemini-repurpose", geminiRepurposeHandler as any);
+  app.post("/api/gemini-consultant", geminiConsultantHandler as any);
 
   // Vite middleware for development
   if (process.env.NODE_ENV !== "production") {
