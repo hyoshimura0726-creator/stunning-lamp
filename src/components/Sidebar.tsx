@@ -20,8 +20,8 @@ export default function Sidebar() {
       >
         <div className="p-6">
           <div className="flex items-center gap-3 mb-8">
-            <div className="w-10 h-10 rounded-xl bg-indigo-600 text-white flex items-center justify-center font-bold text-xl">
-              R
+            <div className="w-10 h-10 rounded-xl bg-indigo-600/20 flex items-center justify-center overflow-hidden shrink-0">
+              <img src="/icon.png" alt="Logo" className="w-full h-full object-cover" />
             </div>
 
             <div>
